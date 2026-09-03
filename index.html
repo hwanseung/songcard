@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>N x M 사진 & 라벨 템플릿</title>
+  <style>
+    :root {
+      /* 기본 N(rows) x M(cols) 설정 - 2행 4열 (2x4) */
+      --cols: 4;
+      --rows: 2;
+      --gap: 16px;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --card-radius: 8px;
+      --label-color: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #334155;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: #0f172a;
+    }
+
+    /* 조작/테스트 컨트롤러 */
+    .controls {
+      background: #ffffff;
+      padding: 16px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .control-group input {
+      width: 60px;
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      background-color: #2563eb;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #1d4ed8;
+    }
+
+    /* Core: N x M Grid Layout */
+    .grid-template {
+      display: grid;
+      /* M (열/cols) 확장성을 위한 CSS repeat */
+      grid-template-columns: repeat(var(--cols), 1fr);
+      gap: var(--gap);
+      width: 100%;
+    }
+
+    /* 각 항목 카드 스타일 */
+    .grid-item {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .grid-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 사진(이미지) 영역 */
+    .grid-item .image-wrapper {
+      width: 100%;
+      aspect-ratio: 4 / 3; /* 이미지 비율 설정 */
+      overflow: hidden;
+      background-color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .grid-item .image-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* 밑에 라벨 영역 */
+    .grid-item .label-wrapper {
+      padding: 12px;
+      text-align: center;
+      background-color: #ffffff;
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .grid-item .label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--label-color);
+      word-break: break-word;
+    }
+
+    /* 인쇄용 설정 */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      .controls, h1 {
+        display: none;
+      }
+      .grid-template {
+        gap: 8px;
+      }
+      .grid-item {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>N x M 사진 & 라벨 그리드 템플릿</h1>
+
+    <!-- 테스트 및 동적 조작 컨트롤러 -->
+    <div class="controls">
+      <div class="control-group">
+        <label for="inputRows">행 (N):</label>
+        <input type="number" id="inputRows" value="2" min="1" max="20">
+      </div>
+      <div class="control-group">
+        <label for="inputCols">열 (M):</label>
+        <input type="number" id="inputCols" value="4" min="1" max="12">
+      </div>
+      <button class="btn" onclick="applyGridSize()">그리드 변경</button>
+      <button class="btn" style="background-color: #059669;" onclick="loadSampleData()">샘플 데이터 주입</button>
+    </div>
+
+    <!-- N x M 그리드 컨테이너 -->
+    <div id="gridContainer" class="grid-template"></div>
+  </div>
+
+  <script>
+    /**
+     * N x M 그리드 템플릿 주입 및 생성 함수
+     * @param {Object} options
+     * @param {number} options.rows - 행 개수 (N)
+     * @param {number} options.cols - 열 개수 (M)
+     * @param {Array<{image: string, label: string}>} options.items - 사진과 라벨 데이터 배열
+     * @param {string} [options.containerId='gridContainer'] - 대상 그리드 컨테이너 ID
+     */
+    function renderGridTemplate({ rows = 2, cols = 4, items = [], containerId = 'gridContainer' }) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      // 1. CSS 변수를 통해 N x M 동적 스타일 적용
+      container.style.setProperty('--rows', rows);
+      container.style.setProperty('--cols', cols);
+
+      // 2. 총 셀 개수 (N * M)
+      const totalCells = rows * cols;
+      let html = '';
+
+      for (let i = 0; i < totalCells; i++) {
+        // 주입된 데이터가 있으면 사용하고, 없으면 placeholder 적용
+        const data = items[i] || {
+          image: `https://picsum.photos/seed/${i + 1}/400/300`,
+          label: `항목 ${i + 1}`
+        };
+
+        html += `
+          <div class="grid-item">
+            <div class="image-wrapper">
+              <img src="${data.image}" alt="${data.label}" loading="lazy">
+            </div>
+            <div class="label-wrapper">
+              <div class="label">${data.label}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    // 글로벌 데이터 상태
+    let currentItems = [];
+
+    // [조작 1] 그리드 크기 동적 변경
+    function applyGridSize() {
+      const rows = parseInt(document.getElementById('inputRows').value) || 2;
+      const cols = parseInt(document.getElementById('inputCols').value) || 4;
+      renderGridTemplate({ rows, cols, items: currentItems });
+    }
+
+    // [조작 2] 샘플 데이터 생성 & 주입
+    function loadSampleData() {
+      const rows = parseInt(document.getElementById('inputRows').value) || 2;
+      const cols = parseInt(document.getElementById('inputCols').value) || 4;
+      const total = rows * cols;
+
+      const sampleLabels = [
+        "사과", "바나나", "체리", "포도", "오렌지", "딸기", "수박", "복숭아",
+        "망고", "파인애플", "키위", "멜론", "자두", "감", "배", "레몬"
+      ];
+
+      currentItems = Array.from({ length: total }, (_, i) => ({
+        image: `https://picsum.photos/seed/item_${i + 1}/400/300`,
+        label: sampleLabels[i % sampleLabels.length] + ` (${i + 1})`
+      }));
+
+      renderGridTemplate({ rows, cols, items: currentItems });
+    }
+
+    // 페이지 로드시 기본 2x4 템플릿 실행
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSampleData();
+    });
+  </script>
+</body>
+</html>
